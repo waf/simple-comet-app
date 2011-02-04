@@ -1,0 +1,89 @@
+<!DOCTYPE HTML>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<script type="text/javascript">
+			var xhr;
+			var responseCursor;
+
+			/* entry point */
+			function main()
+			{
+				// set up a function to periodically check for 'pushed' data
+				pollTimer = setInterval(processNewResponses, 2000);
+				// kick off the long-polling request
+				cometLoop();
+			}
+
+			/* set up and run the long poll */
+			function cometLoop() 
+			{
+				//reinitialize
+				xhr = new XMLHttpRequest();
+				responseCursor = 0;
+
+				// when the request/response successfully finishes, restart it
+				xhr.onreadystatechange = function() { 
+					var COMPLETED_STATE = 4;
+					if(xhr.readyState == COMPLETED_STATE && xhr.status == 200)
+						cometLoop();
+				}
+
+				//make the request
+				xhr.open("GET", "http://localhost:8080/endpoint", true);
+				xhr.send(null);
+			}
+
+			/* check the xmlhttprequest response for data */
+			function processNewResponses()
+			{
+				/* The responseText will periodically be filled with data.
+				 * We maintain a 'responseCursor' that tracks how much of
+				 * the data we've read.
+				 */
+				var allMessages = xhr.responseText;
+				var messageSeparator = "</msg>";
+				do {
+					var unprocessedMessages = allMessages.substring(responseCursor);
+					var messageSeparatorIndex = unprocessedMessages.indexOf(messageSeparator);
+
+					if (messageSeparatorIndex == -1) {
+						// if the messageSeparator wasn't found, there are no new responses
+						break; 
+					}
+
+					// parse out the new message
+					var endOfMessageIndex = messageSeparatorIndex + messageSeparator.length;
+					var message = unprocessedMessages.substring(0, endOfMessageIndex);
+					displayMessage(message);
+					// keep track of what we've read so far.
+					responseCursor += endOfMessageIndex;
+				} while (true);
+			}
+
+			/* display the XML string msg */
+			function displayMessage(msg)
+			{
+				// parse values from msg
+				var elem = document.createElement("div");
+				elem.innerHTML = msg;
+				var index = elem.getElementsByTagName("index")[0].innerHTML;
+				var time = new Date(elem.getElementsByTagName("time")[0].innerHTML*1000);
+				var name = elem.getElementsByTagName("name")[0].innerHTML;
+
+				// display values
+				var li = document.createElement("li");
+				li.innerHTML = index + " " + time + " " + name;
+				document.getElementById("list").appendChild(li);
+			}
+
+			window.addEventListener("load",main,false);
+
+		</script>
+	</head>
+	<body>
+		<ul id="list">
+		</ul>
+	</body>
+</html>
