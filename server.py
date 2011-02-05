@@ -26,6 +26,7 @@ class Comet(object):
 	def endpoint(self, **kw):
 		"""Stream fake messages"""
 		def msg_generator():
+			yield " "*2048 # stream 2kb of data to get past webkit streaming buffers
 			timeout = 100
 			random_range = 10
 			elapsed_time = 0
